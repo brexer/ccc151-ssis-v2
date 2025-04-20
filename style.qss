@@ -1,0 +1,170 @@
+QMainWindow {
+    background-color: #2D3250; 
+    font-family: 'Raleway', sans-serif;
+}
+
+#widget, #icon_only_widget, #full_menu_widget {
+    background-color: #424769; 
+}
+
+/* table widgets and add frames */
+#frame_11, #frame_8, #frame_10, #frame_9, #frame_7, #frame_13 {
+    background-color: #424769;
+}
+
+/* search bar frames */
+#frame_12, #frame_6, #frame_5 {
+    background-color: #424769;
+    border: 2px solid #676F9D; 
+    border-radius: 8px;
+}
+
+QPushButton {
+    background: transparent;
+    border: none;
+    color: #FFFFFF;
+    font-size: 14px;
+}
+
+QPushButton:hover {
+    background-color: #F9B17A; 
+    border-radius: 5px;
+}
+
+QLabel {
+    color: #FFFFFF;
+    font-size: 12px;
+}
+
+/* title label */
+#label_2 {
+    color: #FFFFFF;
+    font-size: 18px;
+}
+
+QPushButton:checked {
+    background-color: transparent;
+    border-bottom: 2px solid #F9B17A; 
+}
+
+#menuButton:checked {
+    background: transparent;
+    border: none;
+    color: #FFFFFF;
+    font-size: 14px;
+}
+
+#frame_highlight {
+    background-color: #F9B17A; 
+    border-radius: 5px;
+}
+
+QTableWidget {
+    background-color: #FFFFFF;
+    gridline-color: #676F9D; 
+    color: #2D3250; 
+    border: 2px solid #676F9D;
+}
+
+QHeaderView::section {
+    background-color: #676F9D; 
+    color: #FFFFFF;
+    padding: 2px;
+    border: 1px solid #424769;
+    font-weight: bold;
+}
+
+QTableWidget::item {
+    padding: 5px;
+    background-color: #FFFFFF;
+}
+
+QTableWidget::item:alternate {
+    background-color: #F0F0F0; 
+}
+
+QTableWidget::item:selected {
+    background-color: #F9B17A; 
+    color: #2D3250;
+}
+
+QScrollBar:vertical, QScrollBar:horizontal {
+    background: #424769;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background: #676F9D;
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background: #F9B17A;
+}
+
+QLineEdit {
+    background-color: #FFFFFF;
+    color: #2D3250;
+    border: 2px solid #676F9D;
+    padding: 5px;
+}
+
+QLineEdit:focus {
+    border: 2px solid #F9B17A;
+}
+
+QComboBox {
+    background-color: #FFFFFF;
+    color: #2D3250;
+    border: 2px solid #676F9D;
+    padding: 5px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #2D3250;
+    selection-background-color: #F9B17A;
+    selection-color: #2D3250;
+}
+
+QTableWidget, QHeaderView::section {
+    border-radius: 0px;
+}
+
+QMessageBox QPushButton {
+    min-width: 60px;
+    min-height: 20px;
+    font-size: 14px;
+    padding: 2px 4px;
+    background-color: #F0F0F0;
+    color: #2D3250;  
+    border: 1px solid #676F9D;
+    border-radius: 5px;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: #F9B17A;
+    border: 1px solid #F9B17A;
+    color: #2D3250;
+}
+
+QMessageBox QPushButton[text="Delete"],
+QMessageBox QPushButton[text="Yes"] {  
+    background-color: #D32F2F;
+    color: #FFFFFF;
+    border: 1px solid #B71C1C;
+}
+
+QMessageBox QPushButton[text="Delete"]:hover,
+QMessageBox QPushButton[text="Yes"]:hover {
+    background-color: #B71C1C; 
+}
+
+#yesButton {
+    background-color: #D32F2F; 
+    color: white;
+    border: 1px solid #B71C1C;
+    min-width: 50px;
+    min-height: 15px;
+    border-radius: 5px;
+    padding: 0px;
+}

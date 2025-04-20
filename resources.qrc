@@ -1,0 +1,26 @@
+<RCC>
+  <qresource prefix="imgs">
+    <file>imgs/refresh_white.png</file>
+    <file>imgs/add_white.png</file>
+    <file>imgs/delete_white.png</file>
+    <file>imgs/edit_white.png</file>
+    <file>imgs/search_white.png</file>
+    <file>imgs/home_fixed.png</file>
+    <file>imgs/menu_fixed.png</file>
+    <file>imgs/program_fixed.png</file>
+    <file>imgs/student_transparent.png</file>
+    <file>imgs/add.png</file>
+    <file>imgs/college_white_transparent.png</file>
+    <file>imgs/home_white_transparent.png</file>
+    <file>imgs/menu_white_transparent.png</file>
+    <file>imgs/program_white_transparent.png</file>
+    <file>imgs/delete.png</file>
+    <file>imgs/edit.png</file>
+    <file>imgs/college.png</file>
+    <file>imgs/home.png</file>
+    <file>imgs/menu.png</file>
+    <file>imgs/program.png</file>
+    <file>imgs/search.png</file>
+    <file>imgs/student.png</file>
+  </qresource>
+</RCC>

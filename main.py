@@ -6,14 +6,11 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QTableWidget, QHeaderView
 from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtGui import  QRegularExpressionValidator, QFont
 from pathlib import Path
+from dbManager import DatabaseManager
 import resources
 import sys
-import csv
+import mysql.connector
 import os
-
-studentdb = "student.csv"
-collegedb = "college.csv"
-programdb = "program.csv"
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -173,38 +170,39 @@ class MainWindow(QMainWindow):
             return
 
         # to prevent duplicate student id numbers
-        for student in self.students:
-            if student[0] == student_id:
-                QMessageBox.warning(self, "Duplicate Student ID", "A student with this ID already exists.")
-                return
+        query = "SELECT student_id FROM student WHERE student_id = %s"
+        existing_student = DatabaseManager().execute_query(query, (student_id,), fetch=True)
+        if existing_student:
+            QMessageBox.warning(self, "Duplicate ID Number", "A student with this ID number already exists.")
+            return
+        
+        query = "INSERT INTO student (student_id, first_name, last_name, gender, year_level, program_code) VALUES (%s, %s, %s, %s, %s, %s)"
+        params = (student_id, student_Fname, student_Lname, student_gender, student_yearlevel, student_program if student_program else None)
 
-        new_student = [student_id, student_Fname, student_Lname, student_gender, student_yearlevel, student_program]
-        self.students.append(new_student)
-        self.saveStudentData()
-        self.updateStudentTable()
-        self.ui.lineEdit_12.clear()
-        self.ui.lineEdit_11.clear()
-        self.ui.lineEdit_10.clear()
-        QMessageBox.information(self, "Student Added", "Student has been added successfully.")
-
-    def saveStudentData(self):
-        with open(studentdb, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["ID", "First Name", "Last Name", "Gender", "Year Level", "Program"])
-            writer.writerows(self.students)
+        if DatabaseManager().execute_query(query, params):
+            self.loadStudentData()
+            self.updateStudentTable()
+            self.ui.lineEdit_12.clear()
+            self.ui.lineEdit_11.clear()
+            self.ui.lineEdit_10.clear()
+            QMessageBox.information(self, "Student Added", "Student has been added successfully.")
 
     def loadStudentData(self):
-        self.students = []
-        if not Path(studentdb).exists():
-            return
-        with open(studentdb, newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                self.students.append([row["ID"], row["First Name"], row["Last Name"], row["Gender"], row["Year Level"], row["Program"]])
+        query = """
+        SELECT s.student_id, s.first_name, s.last_name, s.gender, s.year_level,
+                COALESCE(p.program_code, 'N/A') as program_code
+        FROM student s
+        LEFT JOIN program p ON s.program_code = p.program_code
+        ORDER BY s.last_name, s.first_name
+        """
+        self.students = DatabaseManager().execute_query(query, fetch=True)
 
     def updateStudentTable(self):
         self.ui.studentTable.setRowCount(len(self.students))
         self.ui.studentTable.setColumnCount(6)
+        headers = ["ID Number", "First Name", "Last Name", "Gender", "Year Level", "Program"]
+        self.ui.studentTable.setHorizontalHeaderLabels(headers)
+
         for row, student in enumerate(self.students):
             for col, data in enumerate(student):
                 self.ui.studentTable.setItem(row, col, QTableWidgetItem(data))
@@ -261,12 +259,30 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Student Updated", "Student has been updated successfully.")
 
     def updateCurrentStudent(self, selectedRow):
+        old_student_id = self.students[selectedRow][0]
         student_id = self.editStudentDialog_ui.dialog_lineEdit_1.text().strip()
         student_Fname = self.editStudentDialog_ui.dialog_lineEdit_2.text().strip().title()
         student_Lname = self.editStudentDialog_ui.dialog_lineEdit_3.text().strip().title()
         student_gender = self.editStudentDialog_ui.dialog_comboBox_1.currentText()
         student_yearlevel = self.editStudentDialog_ui.dialog_comboBox_2.currentText()
         student_program = self.editStudentDialog_ui.dialog_comboBox_3.currentText().upper()
+
+        query = """
+        UPDATE student
+        SET student_id = %s, first_name = %s, last_name = %s,
+            gender = %s, year_level = %s, program_code = %s
+        WHERE student_id = %s
+        """
+
+        params = (student_id, student_Fname, student_Lname, student_gender,
+                  student_yearlevel, student_program if student_program != "N/A" else None,
+                  old_student_id)
+        
+        if DatabaseManager().execute_query(query, params):
+            self.loadStudentData()
+            self.updateStudentTable()
+            self.editStudentDialog.close()
+            QMessageBox.information(self, "Student Updated", "Student has been updated successfully.")
 
         self.ui.studentTable.setItem(selectedRow, 0, QTableWidgetItem(student_id))
         self.ui.studentTable.setItem(selectedRow, 1, QTableWidgetItem(student_Fname))
@@ -277,7 +293,6 @@ class MainWindow(QMainWindow):
 
         self.students[selectedRow] = [student_id, student_Fname, student_Lname, student_gender, student_yearlevel, student_program]
         self.updateStudentTable()
-        self.saveStudentData()
 
         self.editStudentDialog.close()
 
@@ -300,24 +315,25 @@ class MainWindow(QMainWindow):
         msgBox.exec()
 
         if msgBox.clickedButton() == yesButton:
-            self.ui.studentTable.removeRow(selectedRow)
-            self.students.pop(selectedRow)
-            self.saveStudentData()
-            self.updateStudentTable()
-            QMessageBox.information(self, "Student Deleted", "Student has been deleted successfully.")
-
+            query = "DELETE FROM student WHERE student_id = %s"
+            if DatabaseManager().execute_query(query, (studentSelected,)):
+                self.ui.studentTable.removeRow(selectedRow)
+                self.loadStudentData()
+                self.updateStudentTable()
+                QMessageBox.information(self, "Student Deleted", "Student has been deleted successfully.")
+          
     def searchStudent(self):
         search_text = self.ui.lineEdit_19.text().strip().lower()
         search_by = self.ui.comboBox_29.currentText()
 
         # mapping for the columns
         self.search_by_options = { 
-            "ID Number": 0,
-            "First Name": 1,
-            "Last Name": 2,
-            "Gender": 3,
-            "Year Level": 4,
-            "Program": 5
+            "ID Number": "s.student_id",
+            "First Name": "s.first_name",
+            "Last Name": "s.last_name",
+            "Gender": "s.gender",
+            "Year Level": "s.year_level",
+            "Program": "COALESCE(p.program_code, 'N/A')"
         }
 
         columnSelected = self.search_by_options.get(search_by, -1)
@@ -327,13 +343,16 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Invalid Search Criteria", "Please select a valid search criteria.")
             return
 
-        # Iterate through all rows in the studentTable
-        for row in range(self.ui.studentTable.rowCount()):
-            item = self.ui.studentTable.item(row, columnSelected)  
-            if item and search_text in item.text().lower():
-                self.ui.studentTable.setRowHidden(row, False)  
-            else:
-                self.ui.studentTable.setRowHidden(row, True) 
+        query = f"""
+        SELECT s.student_id, s.first_name, s.last_name, s.gender, s.year_level, 
+               COALESCE(p.program_code, 'N/A') as program_code
+        FROM student s
+        LEFT JOIN program p ON s.program_code = p.program_code
+        WHERE LOWER({columnSelected}) LIKE %s
+        ORDER BY s.last_name, s.first_name
+        """
+        self.students = DatabaseManager().execute_query(query, (f"%{search_text}%",), fetch=True) or []
+        self.updateStudentTable()
 
         # If search text is empty, reveal all hidden rows
         if not search_text:
@@ -361,16 +380,23 @@ class MainWindow(QMainWindow):
             return
 
         # to prevent duplicate program codes
-        for program in self.programs:
-            if program[0] == program_code:
-                QMessageBox.warning(self, "Duplicate Program Code", "A program with this code already exists.")
-                return
+        query = "SELECT program_code FROM program WHERE program_code = %s"
+        existing_program = DatabaseManager().execute_query(query, (program_code,), fetch=True)
+        if existing_program:
+            QMessageBox.warning(self, "Duplicate Program Code", "A program with this code already exists.")
+            return
 
-        new_program = [program_code, program_name, program_college]
-        self.programs.append(new_program)
-        self.saveProgramData()
-        self.updateProgramTable()
 
+        query = """
+        INSERT INTO program (program_code, program_name, college_code)
+        VALUES (%s, %s, %s)
+        """
+        params = (program_code, program_name, program_college if program_college else None)
+        if DatabaseManager().execute_query(query, params):
+            self.loadProgramData()
+            self.updateProgramTable()
+            self.updateComboBoxes()
+ 
         if self.ui.comboBox_16.findText(program_code) == -1:
             self.ui.comboBox_16.addItem(program_code) # adds program to combobox in add student form
 
@@ -378,29 +404,24 @@ class MainWindow(QMainWindow):
         self.ui.lineEdit_18.clear()      
         QMessageBox.information(self, "Program Added", "Program has been added successfully.")
         
-
-    def saveProgramData(self):
-        with open(programdb, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["Code", "Name", "College"])
-            writer.writerows(self.programs)
-
     def loadProgramData(self):
-        self.programs = []
-        if not Path(programdb).exists():
-            return
-        with open(programdb, newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                self.programs.append([row["Code"], row["Name"], row["College"]])
-                self.ui.comboBox_16.addItem(row["Code"]) # adds existing program to add student combobox
+        query = """
+        SELECT p.program_code, p.program_name, COALESCE(c.college_code, 'N/A') as college_code
+        FROM program p
+        LEFT JOIN college c ON p.college_code = c.college_code
+        ORDER BY p.program_name
+        """
+        self.programs = DatabaseManager().execute_query(query, fetch=True) or []
 
     def updateProgramTable(self):
         self.ui.programTable.setRowCount(len(self.programs))
         self.ui.programTable.setColumnCount(3)
+        headers = ["Program Code", "Program Name", "College Code"]
+        self.ui.programTable.setHorizontalHeaderLabels(headers)
+
         for row, program in enumerate(self.programs):
             for col, data in enumerate(program):
-                self.ui.programTable.setItem(row, col, QTableWidgetItem(data))
+                self.ui.programTable.setItem(row, col, QTableWidgetItem(str(data)))
 
         self.ui.programTable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) 
         self.ui.programTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -450,22 +471,20 @@ class MainWindow(QMainWindow):
         program_name = self.editProgramDialog_ui.dialog_lineEdit_7.text().strip().title()
         program_college = self.editProgramDialog_ui.dialog_comboBox_4.currentText().upper()
 
-        self.ui.programTable.setItem(selectedRow, 0, QTableWidgetItem(program_code))
-        self.ui.programTable.setItem(selectedRow, 1, QTableWidgetItem(program_name))
-        self.ui.programTable.setItem(selectedRow, 2, QTableWidgetItem(program_college))
+        query = """
+        UPDATE program
+        SET program_code = %s, program_name = %s, college_code = %s
+        WHERE program_code = %s
+        """
 
-        self.programs[selectedRow] = [program_code, program_name, program_college]
-        for student in self.students:
-            if student[5] == old_program_code:
-                student[5] = program_code
+        params = (program_code, program_name, program_college if program_college != "N/A" else None, old_program_code)   
 
-        self.updateStudentTable()
-        self.updateComboBoxes()
-        self.saveStudentData()
-        self.updateProgramTable()
-        self.saveProgramData()
-
-        self.editProgramDialog.close()
+        if DatabaseManager().execute_query(query, params):
+            self.loadProgramData()
+            self.updateProgramTable()
+            self.updateComboBoxes()
+            self.editProgramDialog.close()
+            QMessageBox.information(self, "Program Updated", "Program has been updated successfully.")
 
     def deleteProgram(self):
         selectedRow = self.ui.programTable.currentRow()
@@ -486,17 +505,17 @@ class MainWindow(QMainWindow):
         msgBox.exec()
 
         if msgBox.clickedButton() == yesButton:
-            self.ui.programTable.removeRow(selectedRow)
-            self.programs.pop(selectedRow)
-            self.saveProgramData()
-            QMessageBox.information(self, "Program Deleted", "Program has been deleted successfully.")
-
+            query = "DELETE FROM program WHERE program_code = %s"
+            if DatabaseManager().execute_query(query, (programSelected,)):
+                self.ui.programTable.removeRow(selectedRow)
+                self.loadProgramData()
+                self.updateProgramTable()
+                QMessageBox.information(self, "Program Deleted", "Program has been deleted successfully.")
             # set student program to N/A if the program is deleted
             for student in self.students:
                 if student[5] == programSelected:
                     student[5] = "N/A"
                     
-                    self.saveStudentData()
                     self.updateStudentTable()
                     self.updateComboBoxes()
             
@@ -506,9 +525,9 @@ class MainWindow(QMainWindow):
 
         # mapping for the columns
         self.search_by_options = { 
-            "Program Code": 0,
-            "Program Name": 1,
-            "College Code": 2,
+            "Program Code": "p.program_code",
+            "Program Name": "p.program_name",
+            "College Code": "COALESCE(c.college_code, 'N/A')"
         }
 
         columnSelected = self.search_by_options.get(search_by, -1)
@@ -517,14 +536,17 @@ class MainWindow(QMainWindow):
         if columnSelected == -1 and search_text:
             QMessageBox.warning(self, "Invalid Search Criteria", "Please select a valid search criteria.")
             return
+        
+        query = f"""
+        SELECT p.program_code, p.program_name, COALESCE(c.college_code, 'N/A') as college_code
+        FROM program p
+        LEFT JOIN college c ON p.college_code = c.college_code
+        WHERE LOWER({columnSelected}) LIKE %s
+        ORDER BY p.program_name
+        """
+        self.programs = DatabaseManager().execute_query(query, (f"%{search_text}%",), fetch=True) or []
+        self.updateProgramTable()
 
-        # Iterate through all rows in the programTable
-        for row in range(self.ui.programTable.rowCount()):
-            item = self.ui.programTable.item(row, columnSelected)  
-            if item and search_text in item.text().lower():
-                self.ui.programTable.setRowHidden(row, False)  
-            else:
-                self.ui.programTable.setRowHidden(row, True)
     # end of PROGRAM PAGE
 
     # start of COLLEGE PAGE

@@ -26,16 +26,20 @@ class DatabaseManager:
         if self.connection.is_connected():
             print("Connected to MySQL database")
         
-    def get_connection(self):
-        if self.connection is None or not self.connection.is_connected():
-            self.connect()
-        return self.connection
-    
-    def close_connection(self):
-        if self.connection.is_connected():
-            self.connection.close()
-            print("MySQL connection is closed")
+    def execute_query(self, query, params=None, fetch=False):
+        cursor = self.connection.cursor()
+        cursor.execute(query, params or ())
+            
+        if fetch:
+            result = cursor.fetchall()
+            cursor.close()
+            return result
+        else:
+            self.connection.commit()
+            cursor.close()
+            return True
                 
+        
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()

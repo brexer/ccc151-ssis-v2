@@ -19,6 +19,8 @@ CREATE TABLE students (
     last_name VARCHAR(60) NOT NULL,
     gender ENUM('Male', 'Female', 'Other') NOT NULL,
     year_level ENUM('First Year', 'Second Year', 'Third Year', 'Fourth Year') NOT NULL,
-    program_code VARCHAR(10),
+    program_code VARCHAR(10) DEFAULT NULL,
     FOREIGN KEY (program_code) REFERENCES programs(code) ON DELETE SET NULL ON UPDATE CASCADE
 );
+
+SHOW CREATE TABLE students
